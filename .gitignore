@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+
+
+# Added by me
+Makefile
+CMakeCache.txt
+cmake_install.cmake
+*.cbp
+/nodesig
