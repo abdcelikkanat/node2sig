@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
     A.setFromTriplets(edgesTriplets.begin(), edgesTriplets.end());
 
     // Normalize the adjacency matrix
-    cout << "+ The matrix is being normalized." << endl;
+    cout << "+ The matrix is being scaled and normalized." << endl;
     scale(A);
     cout << "\t- Completed!" << endl;
 
@@ -128,19 +128,18 @@ int main(int argc, char** argv) {
 
 void scale(Eigen::SparseMatrix<float, Eigen::RowMajor> &mat) {
 
-    float minValue, maxValue;
-
-    auto values = mat.coeffs();
-    //for(unsigned int i=0; i<values.size(); i++)
-    //    cout << values[i] << endl;
+    auto maxValue = mat.coeffs().maxCoeff();
+    mat = mat / maxValue;
 
     // Set diagonals
+    /*
     auto diagonals = mat.diagonal();
     for(int d=0; d<diagonals.size(); d++) {
         diagonals.coeffRef(d, d) = 0;
         if(mat.row(d).sum() == 0)
             diagonals.coeffRef(d,d)=1;
     }
+    */
 
     // Normalize row sums
     float rowSum;
