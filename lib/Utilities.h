@@ -19,7 +19,7 @@ int parse_arguments(int argc, char** argv, string &edgeFile, string &embFile, un
                     unsigned int &dimension, float &contProb, int &featureBlockSize, int &weightBlockSize, bool &verbose) {
 
     vector <string> parameter_names{"--help",
-                                    "--edgefile", "--embfile", "--walkLen", "--dim",
+                                    "--edgefile", "--embfile", "--walklen", "--dim",
                                     "--prob", "--featureBlockSize", "--weightBlockSize",
                                     "--verbose"
     };

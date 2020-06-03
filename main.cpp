@@ -191,7 +191,6 @@ void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor> &Mat) {
     Eigen::SparseMatrix<T, RowMajor> tempMat(Mat.rows(), Mat.cols());
     tempMat.setFromTriplets(valueTriplets.begin(), valueTriplets.end());
 
-    cout << tempMat.coeffRef(0, 10) << endl;
 
     Mat = tempMat;
 
