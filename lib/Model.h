@@ -59,7 +59,7 @@ template<typename T>
 void Model<T>::_generateWeights(unsigned int N, unsigned int M) {
 
     if (this->_verbose)
-        cout << "A weight matrix of size " << this->_numOfNodes << "x" << this->_dim << " is being (re)generated." << endl;
+        cout << "\t- A weight matrix of size " << this->_numOfNodes << "x" << this->_dim << " is being (re)generated." << endl;
 
     default_random_engine generator(this->_rd());
     normal_distribution<T> distribution(0.0, 1.0);
@@ -67,7 +67,7 @@ void Model<T>::_generateWeights(unsigned int N, unsigned int M) {
     this->_weights = this->_weights.unaryExpr([&](float dummy) { return distribution(generator); });
 
     if (this->_verbose)
-        cout << "--> Completed!" << endl;
+        cout << "\t- Completed!" << endl;
 
 }
 
@@ -95,6 +95,9 @@ template<typename T>
 void Model<T>::encodeByRow(Eigen::SparseMatrix<T, Eigen::RowMajor> &X, string filePath) {
 
     this->_generateWeights(this->_numOfNodes, this->_dim);
+
+    if(_verbose)
+        cout << "\t- Approach is 'Encode by Row'." << endl;
 
     fstream fs(filePath, fstream::out | fstream::binary);
     if(fs.is_open()) {
@@ -131,7 +134,7 @@ void Model<T>::encodeByRow(Eigen::SparseMatrix<T, Eigen::RowMajor> &X, string fi
         fs.close();
 
     } else {
-        cout << "An error occurred during opening the file!" << endl;
+        cout << "+ An error occurred during opening the file!" << endl;
     }
 
 }
@@ -140,6 +143,9 @@ template<typename T>
 void Model<T>::encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor> &X, string filePath) {
 
     _generateWeights(this->_numOfNodes, this->_dim);
+
+    if(_verbose)
+        cout << "\t- Approach is 'All in One'." << endl;
 
     fstream fs(filePath, fstream::out | fstream::binary);
 
@@ -159,7 +165,7 @@ void Model<T>::encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor> &X, string
 
         auto end_time = chrono::steady_clock::now();
         if(_verbose)
-            cout << "--> Elapsed time for matrix multiplication: "<< chrono::duration_cast<chrono::seconds>(end_time - start_time).count() << endl;
+            cout << "\t- Elapsed time for multiplication: "<< chrono::duration_cast<chrono::seconds>(end_time - start_time).count() << endl;
 
 
         for(unsigned int currentRowIdx=0; currentRowIdx< this->_numOfNodes; currentRowIdx++) {
@@ -180,7 +186,7 @@ void Model<T>::encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor> &X, string
         fs.close();
 
     } else {
-        cout << "An error occurred during opening the file!" << endl;
+        cout << "+ An error occurred during opening the file!" << endl;
     }
 
 }
@@ -190,6 +196,9 @@ template<typename T>
 void Model<T>::encodeByWeightBlock(Eigen::SparseMatrix<T, Eigen::RowMajor> &X, string filePath, int weightBlockSize) {
 
     fstream fs(filePath, fstream::out | fstream::binary);
+
+    if(_verbose)
+        cout << "\t- Approach is 'Encode by Weight Blocks'." << endl;
 
     bool **embMatrix = new bool*[this->_numOfNodes];
     for(unsigned int node=0; node < this->_numOfNodes; node++)

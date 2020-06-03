@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
 
     if(err_code != 0) {
         if(err_code < 0)
-            cout << "Error code: " << err_code << endl;
+            cout << "+ Error code: " << err_code << endl;
         return 0;
     }
 
@@ -70,9 +70,9 @@ int main(int argc, char** argv) {
     A.setFromTriplets(edgesTriplets.begin(), edgesTriplets.end());
 
     // Normalize the adjacency matrix
-    cout << "Scaling started!" << endl;
-    //scale(A);
-    cout << "Scaling completed!" << endl;
+    cout << "+ The matrix is being normalized." << endl;
+    scale(A);
+    cout << "\t- Completed!" << endl;
 
     // Construct zero matrix
     Eigen::SparseMatrix<float, Eigen::RowMajor> X(numOfNodes, numOfNodes);
@@ -88,28 +88,27 @@ int main(int argc, char** argv) {
 
     // Random walk
     if(verbose)
-        cout << "Performing random walks" << endl;
+        cout << "+ Random walks are being performed." << endl;
     for(unsigned int l=0; l<walkLen; l++) {
         if(verbose)
-            cout << "--> Current walk: " << l+1 << endl;
+            cout << "\t- Current walk: " << l+1 << endl;
         P = P * A;
         P = (contProb)*P + (1-contProb)*P0;
         X = X + P;
     }
     if(verbose)
-        cout << "Completed!" << endl;
+        cout << "\t- Completed!" << endl;
 
     if(verbose)
-        cout << "Computing Positive Pointwise Mutual Information (PPMI)" << endl;
+        cout << "+ Positive Pointwise Mutual Information (PPMI) is being computed." << endl;
     ppmi_matrix<float>(X);
     if(verbose)
-        cout << "Completed!" << endl;
+        cout << "\t- Completed!" << endl;
 
     Model<T> m(numOfNodes, dimension, verbose);
-    cout << "Model started!" << endl;
 
     if(verbose)
-        cout << "The hash codes are being generated." << endl;
+        cout << "+ The hash codes are being generated." << endl;
     if(featureBlockSize == 0 && weightBlockSize ==0)
         m.encodeAllInOne(X, embFile);
     else if(featureBlockSize == 1 && weightBlockSize ==0)
@@ -119,7 +118,7 @@ int main(int argc, char** argv) {
     else
         cout << "Invalid settings!" << endl;
     if(verbose)
-        cout << "Completed!" << endl;
+        cout << "\t- Completed!" << endl;
 
 
     return 0;
