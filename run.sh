@@ -15,7 +15,7 @@ do
 	
 	do
 		edge_file_path=${edgelistbase}/${dataset}_newborn.edgelist
-		emb_file_path=${outputbase}/${dataset}_newborn_L=${L}.edgelist
+		emb_file_path=${outputbase}/${dataset}_newborn_L=${L}.embedding
 		
                 echo "---------------"
 		echo $dataset, $L
