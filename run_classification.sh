@@ -25,7 +25,7 @@ do
 		 echo $dataset, $L
                  echo "---------------"
 
-		python classification.py ${gml_file_path} ${emb_file_path} ${result_file_path} 10 all svm-hamming
+		python3 classification.py ${gml_file_path} ${emb_file_path} ${result_file_path} 10 all svm-hamming
 		
 	done
 done
