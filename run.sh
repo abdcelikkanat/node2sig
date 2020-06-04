@@ -3,7 +3,7 @@ edgelistbase="../node2sig_edgelists"
 outputbase="../node2sig_embeddings"
 walklen=5
 
-datasets=(blogcatalog dblp Homo_sapiens wiki)
+datasets=(blogcatalog cora dblp Homo_sapiens wiki)
 #
 
 walk_lens=(1 2 3 4 5)

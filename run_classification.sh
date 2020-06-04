@@ -6,7 +6,7 @@ embbase="../node2sig_embeddings"
 resultbase="../node2sig_results"
 
 
-datasets=(blogcatalog dblp Homo_sapiens wiki)
+datasets=(blogcatalog cora dblp Homo_sapiens wiki)
 #
 
 walk_lens=(1 2 3 4 5)
