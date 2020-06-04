@@ -17,7 +17,7 @@ do
         for dataset in ${datasets[@]}
 	
 	do
-		gml_file_path=${gmlbase}/${dataset}_newborn.embedding
+		gml_file_path=${gmlbase}/${dataset}_newborn.gml
 		emb_file_path=${embbase}/${dataset}_newborn.embedding
 		result_file_path=${resultbase}/${dataset}_newborn_L=${L}.result
 		
