@@ -217,22 +217,30 @@ def print_results(results, shuffle_std, detailed=False):
     print(output)
 
 
+def save_results(output_file, shuffle_std, detailed=False):
+
+    with open(output_file, 'w') as f:
+        output = self.get_output_text(shuffle_std=shuffle_std, detailed=detailed)
+        f.write(output)
+
 if __name__ == "__main__":
 
     graph_path = sys.argv[1]
 
     embedding_file = sys.argv[2]
 
-    number_of_shuffles = int(sys.argv[3])
+    output_file = sys.argv[3]
 
-    if sys.argv[4] == "large":
+    number_of_shuffles = int(sys.argv[4])
+
+    if sys.argv[5] == "large":
         training_ratios = [i for i in np.arange(0.1, 1, 0.1)]
-    elif sys.argv[4] == "all":
+    elif sys.argv[5] == "all":
         training_ratios = [i for i in np.arange(0.01, 0.1, 0.01)] + [i for i in np.arange(0.1, 1, 0.1)]
     else:
         raise ValueError("Invalid training ratio")
 
-    classification_method = sys.argv[5]
+    classification_method = sys.argv[6]
 
     print("---------------------------------------")
     print("Graph path: {}".format(graph_path))
@@ -246,3 +254,4 @@ if __name__ == "__main__":
     results = evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, classification_method)
 
     print_results(results=results, shuffle_std=False, detailed=False)
+    save_results(output_file, shuffle_std=False, detailed=False)
