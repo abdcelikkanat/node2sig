@@ -217,10 +217,10 @@ def print_results(results, shuffle_std, detailed=False):
     print(output)
 
 
-def save_results(output_file, shuffle_std, detailed=False):
+def save_results(results, output_file, shuffle_std, detailed=False):
 
     with open(output_file, 'w') as f:
-        output = self.get_output_text(shuffle_std=shuffle_std, detailed=detailed)
+        output = get_output_text(results=results, shuffle_std=shuffle_std, detailed=detailed)
         f.write(output)
 
 if __name__ == "__main__":
@@ -254,4 +254,4 @@ if __name__ == "__main__":
     results = evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, classification_method)
 
     print_results(results=results, shuffle_std=False, detailed=False)
-    save_results(output_file, shuffle_std=False, detailed=False)
+    save_results(results, output_file, shuffle_std=False, detailed=False)
