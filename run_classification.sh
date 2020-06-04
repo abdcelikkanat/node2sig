@@ -22,7 +22,7 @@ do
 		result_file_path=${resultbase}/${dataset}_newborn_L=${L}.result
 		
                  echo "---------------"
-		echo $dataset, $L
+		 echo $dataset, $L
                  echo "---------------"
 
 		python classification.py ${gml_file_path} ${emb_file_path} ${result_file_path} 10 all svm-hamming
