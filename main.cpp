@@ -12,11 +12,11 @@
 using namespace std;
 using namespace Eigen;
 
-void scale(Eigen::SparseMatrix<float, Eigen::RowMajor> &mat);
+void scale(Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> &mat);
 
 //void ppmi_matrix(Eigen::MatrixXf &Mat);
 template<typename T>
-void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor> &Mat);
+void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor, ptrdiff_t> &Mat);
 
 int main(int argc, char** argv) {
 
@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
     // Get edge triplets
     vector <Triplet<T>> edgesTriplets = g.getEdges<T>();
     // Construct the adjacency matrix
-    Eigen::SparseMatrix<float, Eigen::RowMajor> A(numOfNodes, numOfNodes);
+    Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> A(numOfNodes, numOfNodes);
     A.setFromTriplets(edgesTriplets.begin(), edgesTriplets.end());
 
     // Normalize the adjacency matrix
@@ -75,14 +75,14 @@ int main(int argc, char** argv) {
     cout << "\t- Completed!" << endl;
 
     // Construct zero matrix
-    Eigen::SparseMatrix<float, Eigen::RowMajor> X(numOfNodes, numOfNodes);
+    Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> X(numOfNodes, numOfNodes);
 
     // Construct the identity matrix
-    Eigen::SparseMatrix<float, Eigen::RowMajor> P(numOfNodes, numOfNodes);
+    Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> P(numOfNodes, numOfNodes);
     P.setIdentity();
 
     // Construct another identity matrix
-    Eigen::SparseMatrix<float, Eigen::RowMajor> P0(numOfNodes, numOfNodes);
+    Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> P0(numOfNodes, numOfNodes);
     P0.setIdentity();
 
 
@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
 }
 
 
-void scale(Eigen::SparseMatrix<float, Eigen::RowMajor> &mat) {
+void scale(Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> &mat) {
 
     auto maxValue = mat.coeffs().maxCoeff();
     mat = mat / maxValue;
@@ -145,11 +145,11 @@ void scale(Eigen::SparseMatrix<float, Eigen::RowMajor> &mat) {
     float rowSum;
     for(int i=0; i<mat.outerSize(); i++) {
         rowSum = 0;
-        for(Eigen::SparseMatrix<float, Eigen::RowMajor>::InnerIterator it(mat, i); it; ++it)
+        for(Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t>::InnerIterator it(mat, i); it; ++it)
             rowSum += it.value();
 
         if(rowSum != 0) {
-            for(Eigen::SparseMatrix<float, Eigen::RowMajor>::InnerIterator it(mat, i); it; ++it)
+            for(Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t>::InnerIterator it(mat, i); it; ++it)
                 it.valueRef() = it.valueRef() / rowSum;
         }
     }
@@ -158,7 +158,7 @@ void scale(Eigen::SparseMatrix<float, Eigen::RowMajor> &mat) {
 }
 
 template<typename T>
-void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor> &Mat) {
+void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor, ptrdiff_t> &Mat) {
 
     // Positive Pointwise Mutual Information matrix
     T *rowSums = new T[Mat.rows()];
@@ -166,7 +166,7 @@ void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor> &Mat) {
     T totalSum = 0;
 
     for (int row=0; row < Mat.rows(); ++row) {
-        for (typename SparseMatrix<T, RowMajor>::InnerIterator it(Mat, row); it; ++it) {
+        for (typename SparseMatrix<T, RowMajor, ptrdiff_t>::InnerIterator it(Mat, row); it; ++it) {
             rowSums[row] += it.value();
             colSums[it.col()] += it.value();
             totalSum += it.value();
@@ -176,7 +176,7 @@ void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor> &Mat) {
     T value;
     vector <Triplet<T>> valueTriplets;
     for (unsigned int row=0; row < Mat.rows(); ++row) {
-        for (typename SparseMatrix<T, RowMajor>::InnerIterator it(Mat, row); it; ++it) {
+        for (typename SparseMatrix<T, RowMajor, ptrdiff_t>::InnerIterator it(Mat, row); it; ++it) {
             value = log( (totalSum*it.value()) / (rowSums[row]*colSums[it.col()]) );
             if(value > 0)
                 valueTriplets.push_back(Triplet<T>(row, it.col(), totalSum));
@@ -186,7 +186,7 @@ void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor> &Mat) {
     delete [] rowSums;
     delete [] colSums;
 
-    Eigen::SparseMatrix<T, RowMajor> tempMat(Mat.rows(), Mat.cols());
+    Eigen::SparseMatrix<T, RowMajor, ptrdiff_t> tempMat(Mat.rows(), Mat.cols());
     tempMat.setFromTriplets(valueTriplets.begin(), valueTriplets.end());
 
 
