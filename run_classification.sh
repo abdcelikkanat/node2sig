@@ -18,7 +18,7 @@ do
 	
 	do
 		gml_file_path=${gmlbase}/${dataset}_newborn.gml
-		emb_file_path=${embbase}/${dataset}_newborn.embedding
+		emb_file_path=${embbase}/${dataset}_newborn_L=${L}.embedding
 		result_file_path=${resultbase}/${dataset}_newborn_L=${L}.result
 		
                  echo "---------------"
