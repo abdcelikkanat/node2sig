@@ -139,7 +139,9 @@ def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, cl
             # Shuffle the data
             shuffled_idx = np.random.permutation(N)
             shuffled_sim = sim[shuffled_idx, :]
+            print(shuffled_sim.shape)
             shuffled_sim = shuffled_sim[:, shuffled_idx]
+            print(shuffled_sim.shape)
             shuffled_labels = label_matrix[shuffled_idx]
             print(sim.shape, shuffled_sim.shape)
 
