@@ -136,6 +136,7 @@ def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, cl
 
             print("Current train ratio: {} - shuffle: {}/{}".format(train_ratio, shuffleIdx+1, number_of_shuffles))
 
+            print(label_matrix.shape)
             # Shuffle the data
             shuffled_idx = np.random.permutation(N)
             shuffled_sim = sim[shuffled_idx, :]
