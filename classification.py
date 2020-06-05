@@ -137,7 +137,10 @@ def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, cl
             print("Current train ratio: {} - shuffle: {}/{}".format(train_ratio, shuffleIdx+1, number_of_shuffles))
 
             # Shuffle the data
-            shuffled_sim, shuffled_labels = shuffle(sim, label_matrix)
+            shuffled_idx = shuffle(sim.shape[0])
+            shuffled_sim = sim[shuffled_idx, :]
+            shuffled_sim = shuffled_sim[:, shuffled_idx]
+            shuffled_labels = label_matrix[shuffled_idx, :]
 
             # Get the training size
             train_size = int(train_ratio * N)
