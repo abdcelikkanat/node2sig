@@ -128,9 +128,10 @@ def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, cl
 
     for train_ratio in training_ratios:
 
-        print("Current train ratio: {}".format(train_ratio))
+        for shuffleIdx in range(number_of_shuffles):
 
-        for _ in range(number_of_shuffles):
+            print("Current train ratio: {} - shuffle: {}".format(train_ratio, shuffleIdx))
+
             # Shuffle the data
             shuffled_sim, shuffled_labels = shuffle(sim, label_matrix)
 
@@ -231,7 +232,7 @@ if __name__ == "__main__":
     elif sys.argv[5] == "all":
         training_ratios = [i for i in np.arange(0.01, 0.1, 0.01)] + [i for i in np.arange(0.1, 1, 0.1)]
     elif sys.argv[5] == "choice":
-        training_ratios = [i for i in np.arange(0.01, 0.1, 0.01)] + [i for i in np.arange(0.1, 1, 0.1)]
+        training_ratios = [0.2, 0.5, 0.8]
     else:
         raise ValueError("Invalid training ratio")
 
@@ -240,6 +241,7 @@ if __name__ == "__main__":
     print("---------------------------------------")
     print("Graph path: {}".format(graph_path))
     print("Emb path: {}".format(embedding_file))
+    print("Output path: {}".format(output_file))
     print("Num of shuffles: {}".format(number_of_shuffles))
     print("Training ratios: {}".format(training_ratios))
     print("Classification method: {}".format(classification_method))
