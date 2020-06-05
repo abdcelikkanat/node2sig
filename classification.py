@@ -86,6 +86,8 @@ def get_node2community(nxg):
 
 def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, classification_method):
 
+    cache_size = 10240
+
     g = nx.read_gml(graph_path)
     x = read_binary_emb_file(file_path=embedding_file)
 
@@ -112,50 +114,42 @@ def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, cl
         for ratio in training_ratios:
             results[score_t].update({ratio: []})
 
+
+    print("+ Similarity matrix is begin computed!")
+    if classification_method == "svm-hamming":
+        sim = 1.0 - cdist(x, x, 'hamming')
+    elif classification_method == "svm-hamming-cosine":
+        sim = 1.0 - cdist(x, x, 'hamming')
+    else:
+        raise ValueError("Invalid classification method name: {}".format(classification_method))
+
+    print("\t- Completed!")
+
+
     for train_ratio in training_ratios:
+
+        print("Current train ratio: {}".format(train_ratio))
 
         for _ in range(number_of_shuffles):
             # Shuffle the data
-            shuffled_features, shuffled_labels = shuffle(x, label_matrix)
+            shuffled_sim, shuffled_labels = shuffle(sim, label_matrix)
 
             # Get the training size
             train_size = int(train_ratio * N)
             # Divide the data into the training and test sets
-            train_features = shuffled_features[0:train_size, :]
+            train_sim = shuffled_sim[0:train_size, 0:train_size]
             train_labels = shuffled_labels[0:train_size]
 
-            test_features = shuffled_features[train_size:, :]
+            test_sim = shuffled_sim[train_size:, train_size:]
             test_labels = shuffled_labels[train_size:]
 
             # Train the classifier
-            if classification_method == "logistic":
-                ovr = OneVsRestClassifier(LogisticRegression(solver='liblinear'))
-            elif classification_method == "svm-rbf":
-                ovr = OneVsRestClassifier(SVC(kernel="rbf", cache_size=4096, probability=True))
+            ovr = OneVsRestClassifier(SVC(kernel="precomputed", cache_size=cache_size, probability=True))
 
-            elif classification_method == "svm-hamming":
-                ovr = OneVsRestClassifier(SVC(kernel="precomputed", cache_size=4096, probability=True))
-                _train_features = train_features.copy()
-                _test_features = test_features.copy()
-
-                train_features = 1.0 - cdist(_train_features, _train_features, 'hamming')
-                test_features = 1.0 - cdist(_test_features, _train_features, 'hamming')
-
-            elif classification_method == "svm-hamming-cosine":
-                ovr = OneVsRestClassifier(SVC(kernel="precomputed", cache_size=4096, probability=True))
-                _train_features = train_features.copy()
-                _test_features = test_features.copy()
-
-                train_features = 1.0 - cdist(_train_features, _train_features, 'cosine')
-                test_features = 1.0 - cdist(_test_features, _train_features, 'cosine')
-
-            else:
-                raise ValueError("Invalid classification method name: {}".format(classification_method))
-
-            ovr.fit(train_features, train_labels)
+            ovr.fit(train_sim, train_labels)
 
             # Find the predictions, each node can have multiple labels
-            test_prob = np.asarray(ovr.predict_proba(test_features))
+            test_prob = np.asarray(ovr.predict_proba(test_sim))
             y_pred = []
             for i in range(test_labels.shape[0]):
                 k = test_labels[i].getnnz()  # The number of labels to be predicted
@@ -175,7 +169,6 @@ def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, cl
                                  average=score_t)
 
                 results[score_t][train_ratio].append(score)
-
 
     return results
 
@@ -237,6 +230,8 @@ if __name__ == "__main__":
         training_ratios = [i for i in np.arange(0.1, 1, 0.1)]
     elif sys.argv[5] == "all":
         training_ratios = [i for i in np.arange(0.01, 0.1, 0.01)] + [i for i in np.arange(0.1, 1, 0.1)]
+    elif sys.argv[5] == "choice":
+        training_ratios = [i for i in np.arange(0.01, 0.1, 0.01)] + [i for i in np.arange(0.1, 1, 0.1)]
     else:
         raise ValueError("Invalid training ratio")
 
@@ -249,7 +244,6 @@ if __name__ == "__main__":
     print("Training ratios: {}".format(training_ratios))
     print("Classification method: {}".format(classification_method))
     print("---------------------------------------")
-
 
     results = evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, classification_method)
 
