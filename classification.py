@@ -136,28 +136,21 @@ def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, cl
 
             print("Current train ratio: {} - shuffle: {}/{}".format(train_ratio, shuffleIdx+1, number_of_shuffles))
 
-            print("-------------")
-            print(sim.shape)
             # Shuffle the data
             shuffled_idx = np.random.permutation(N)
             shuffled_sim = sim[shuffled_idx, :]
-            print(shuffled_sim.shape)
             shuffled_sim = shuffled_sim[:, shuffled_idx]
-            print(shuffled_sim.shape)
             shuffled_labels = label_matrix[shuffled_idx]
-            print(sim.shape, shuffled_sim.shape)
 
             # Get the training size
             train_size = int(train_ratio * N)
             # Divide the data into the training and test sets
             train_sim = shuffled_sim[0:train_size, :]
             train_sim = train_sim[:, 0:train_size]
-            print(train_sim.shape)
             train_labels = shuffled_labels[0:train_size]
 
             test_sim = shuffled_sim[train_size:, :]
-            test_sim = test_sim[:, train_size:]
-            print(test_sim.shape)
+            test_sim = test_sim[:, 0:train_size]
             test_labels = shuffled_labels[train_size:]
 
             # Train the classifier
