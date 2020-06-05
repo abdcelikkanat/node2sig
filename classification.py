@@ -141,18 +141,18 @@ def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, cl
             shuffled_idx = np.random.permutation(N)
             shuffled_sim = sim[shuffled_idx, :]
             shuffled_sim = shuffled_sim[:, shuffled_idx]
-            shuffled_labels = label_matrix[shuffled_idx, :]
+            shuffled_labels = label_matrix[shuffled_idx]
 
             # Get the training size
             train_size = int(train_ratio * N)
             # Divide the data into the training and test sets
             train_sim = shuffled_sim[0:train_size, :]
             train_sim = train_sim[:, 0:train_size]
-            train_labels = shuffled_labels[0:train_size, :]
+            train_labels = shuffled_labels[0:train_size]
 
             test_sim = shuffled_sim[train_size:, :]
             test_sim = test_sim[:, train_size:]
-            test_labels = shuffled_labels[train_size:, :]
+            test_labels = shuffled_labels[train_size:]
 
             # Train the classifier
             ovr = OneVsRestClassifier(SVC(kernel="precomputed", cache_size=cache_size, probability=True))
