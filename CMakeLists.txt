@@ -19,6 +19,11 @@ endif()
 
 
 
+#cmake_minimum_required(VERSION 3.9)
+project(nodesig LANGUAGES CXX)
+
+
+
 include_directories(lib)
 include_directories(lib/eigen)
 include_directories(${MKL_INCLUDE_DIRS})
@@ -30,7 +35,10 @@ set(LIB_FILES lib/Graph.h lib/Model.h lib/Utilities.h)
 
 add_executable(${CMAKE_PROJECT_NAME} main.cpp ${SOURCE_FILES} ${LIB_FILES})
 
-target_link_libraries(${CMAKE_PROJECT_NAME} -L${MKLROOT}/lib -Wl,-rpath,${MKLROOT}/lib -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl)
+################ OpenMP ################
+find_package(OpenMP REQUIRED)
+########################################
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX -L${MKLROOT}/lib -Wl,-rpath,${MKLROOT}/lib -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl)
 #target_link_libraries(${CMAKE_PROJECT_NAME}  -L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl)
 # Clone Eigen Lib
 set(EIGEN_DIR ${CMAKE_SOURCE_DIR}/lib/eigen)

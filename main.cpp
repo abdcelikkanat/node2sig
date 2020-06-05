@@ -55,6 +55,14 @@ int main(int argc, char** argv) {
         return 0;
     }
 
+    cout << "------------------------------------" << endl;
+    cout << "Walk length: " << walkLen << endl;
+    cout << "Dimension: " << dimension << endl;
+    cout << "Prob: " << contProb << endl;
+    cout << "------------------------------------" << endl;
+
+    Eigen::initParallel();
+/*
     typedef float T;
 
     Graph g = Graph(directed);
@@ -120,7 +128,7 @@ int main(int argc, char** argv) {
     if(verbose)
         cout << "\t- Completed!" << endl;
 
-
+*/
     return 0;
 
 }

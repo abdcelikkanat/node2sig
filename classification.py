@@ -12,6 +12,10 @@ from scipy.spatial.distance import squareform
 from scipy.spatial.distance import pdist
 from scipy.spatial.distance import cdist
 import sys
+import warnings
+from sklearn.exceptions import DataConversionWarning
+warnings.filterwarnings(action='ignore', category=DataConversionWarning)
+
 
 _score_types = ['micro', 'macro']
 
@@ -130,7 +134,7 @@ def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, cl
 
         for shuffleIdx in range(number_of_shuffles):
 
-            print("Current train ratio: {} - shuffle: {}".format(train_ratio, shuffleIdx))
+            print("Current train ratio: {} - shuffle: {}/{}".format(train_ratio, shuffleIdx+1, number_of_shuffles))
 
             # Shuffle the data
             shuffled_sim, shuffled_labels = shuffle(sim, label_matrix)
