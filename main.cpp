@@ -61,8 +61,10 @@ int main(int argc, char** argv) {
     cout << "Prob: " << contProb << endl;
     cout << "------------------------------------" << endl;
 
+    auto start_time = chrono::steady_clock::now();
+
     Eigen::initParallel();
-/*
+
     typedef float T;
 
     Graph g = Graph(directed);
@@ -128,7 +130,11 @@ int main(int argc, char** argv) {
     if(verbose)
         cout << "\t- Completed!" << endl;
 
-*/
+
+    auto end_time = chrono::steady_clock::now();
+    if(verbose)
+        cout << "+ Total elapsed time: " << chrono::duration_cast<chrono::seconds>(end_time - start_time).count() << "secs." << endl;
+
     return 0;
 
 }
