@@ -8,6 +8,7 @@
 #include "Graph.h"
 #include "Model.h"
 #include "Utilities.h"
+#include <fstream>
 
 using namespace std;
 using namespace Eigen;
@@ -84,6 +85,12 @@ int main(int argc, char** argv) {
     scale(A);
     cout << "\t- Completed!" << endl;
 
+    /*
+    MatrixXf A1 = MatrixXf(A);
+    for(int i=0; i<numOfNodes; i++)
+        cout << A1(0, i) << " ";
+    cout << endl;
+    */
     // Construct zero matrix
     Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> X(numOfNodes, numOfNodes);
 
@@ -106,6 +113,12 @@ int main(int argc, char** argv) {
         P = (contProb)*P + (1-contProb)*P0;
         X = X + P;
     }
+    /*
+    MatrixXf A2 = MatrixXf(X);
+    for(int i=0; i<numOfNodes; i++)
+        cout << A2(0, i) << " "; 
+    cout << endl;
+    */
     if(verbose)
         cout << "\t- Completed!" << endl;
 
@@ -114,7 +127,29 @@ int main(int argc, char** argv) {
     ppmi_matrix<float>(X);
     if(verbose)
         cout << "\t- Completed!" << endl;
+    
+    /*
+    MatrixXf A3 = MatrixXf(X);
+    for(int i=0; i<numOfNodes; i++)
+        cout << A3(0, i) << " "; 
+    cout << endl;
+    */
 
+    /*
+    cout << "Writing..." << endl;
+    MatrixXf myT = MatrixXf(X); 
+    ofstream outfile ("../karate_cpp_pmi.txt");
+    for (int r=0; r<numOfNodes; r++) {
+        for (int c=0; c< numOfNodes; c++)
+        {
+        outfile << myT(r,c);
+        outfile << " ";
+        }
+        outfile << "\n";
+    }
+    outfile.close();
+    cout << "-----" << endl;
+    */
     Model<T> m(numOfNodes, dimension, verbose);
 
     if(verbose)
@@ -179,21 +214,55 @@ void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor, ptrdiff_t> &Mat) {
     T *colSums = new T[Mat.cols()];
     T totalSum = 0;
 
+    for (int row=0; row < Mat.rows(); row++)
+        rowSums[row] = 0.0;
+
+    for (int col=0; col < Mat.cols(); col++)
+        colSums[col] = 0.0;
+
+
+    scale(Mat);
+
     for (int row=0; row < Mat.rows(); ++row) {
         for (typename SparseMatrix<T, RowMajor, ptrdiff_t>::InnerIterator it(Mat, row); it; ++it) {
-            rowSums[row] += it.value();
+            if(it.col() == row) {
+               it.valueRef() = 0;
+            } else {
+               rowSums[row] += it.value();
+               colSums[it.col()] += it.value();
+               totalSum += it.value();
+            }
+        }
+        /*
+        for (typename SparseMatrix<T, RowMajor, ptrdiff_t>::InnerIterator it(Mat, row); it; ++it) {
+            if(row == 0 && it.col() ==0)
+                cout << "YETERRRR: " << it.value() << endl;
+
+            if(it.col() == row)
+                it.valueRef() = 0;
+            else
+                it.valueRef() = it.value() / rowSums[row];
             colSums[it.col()] += it.value();
             totalSum += it.value();
         }
+        rowSums[row] = 1.0;
+        */
     }
+    cout << "Totsl sum: " << totalSum << endl;
 
     T value;
     vector <Triplet<T>> valueTriplets;
     for (unsigned int row=0; row < Mat.rows(); ++row) {
         for (typename SparseMatrix<T, RowMajor, ptrdiff_t>::InnerIterator it(Mat, row); it; ++it) {
-            value = log( (totalSum*it.value()) / (rowSums[row]*colSums[it.col()]) );
-            if(value > 0)
-                valueTriplets.push_back(Triplet<T>(row, it.col(), totalSum));
+            if (row == 0)
+                cout << it.col() << " " << it.value() << endl;
+            if(it.value() > 0) {
+                value = log( (totalSum*it.value()) / (rowSums[row]*colSums[it.col()]) );
+                if(value > 0) {
+                    valueTriplets.push_back(Triplet<T>(row, it.col(), value));
+                    //cout << value << " " << endl;
+                }
+            }
         }
     }
 

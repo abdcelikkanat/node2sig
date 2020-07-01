@@ -148,7 +148,9 @@ void Model<T>::encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t>
         cout << "\t- Approach is 'All in One'." << endl;
 
     fstream fs(filePath, fstream::out | fstream::binary);
-
+    ////////
+    fstream fsYeni("../nodesig_textformat.embedding", fstream::out);
+    ////////
     if(fs.is_open()) {
 
         Eigen::MatrixXf matrixProd(_numOfNodes, _dim);
@@ -177,7 +179,17 @@ void Model<T>::encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t>
                 bin[int(d/8)] <<= 1;
                 if (nodeVect.coeff(d) > 0)
                     bin[int(d/8)] += 1;
+                ////////
+                if(nodeVect.coeff(d) > 0)
+                    fsYeni << "1 ";
+                else
+                    fsYeni << "0 ";
+                ///////
+
             }
+            ////////
+            fsYeni << endl;
+            //////////
 
             copy(bin.begin(), bin.end(), std::ostreambuf_iterator<char>(fs));
 
