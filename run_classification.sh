@@ -9,7 +9,7 @@ resultbase="../node2sig_results"
 datasets=(blogcatalog cora dblp Homo_sapiens wiki)
 #
 
-walk_lens=(1 2 3 4 5)
+walk_lens=(5)
 
 
 for L in ${walk_lens[@]}

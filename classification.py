@@ -59,10 +59,9 @@ def read_binary_emb_file(file_path, nodelist=None):
         for _ in range(8):
 
             binary_repr.append(True if num % 2 else False )
-
             num = num >> 1
 
-        return binary_repr
+        return binary_repr[::-1]
 
     embs = [[] for _ in range(len(nodelist))]
     mapping = {node: nodeIdx for nodeIdx, node in enumerate(nodelist)}
@@ -107,18 +106,17 @@ def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, cl
     g = nx.read_gml(graph_path)
 
     node2community = get_node2community(g)
-    #print("Basladi 3")
 
     # N = g.number_of_nodes()
     K = detect_number_of_communities(g)
-    print("K: {}".format(K))
+    #print("K: {}".format(K))
     # nodelist = [node for node in g.nodes()]
     nodelist = [int(node) for node in node2community]
     #nodelist.sort()
 
     N = len(nodelist)
-    print("N: {}".format(N))
-    #print("--------", x.shape)
+    #print("N: {}".format(N))
+    #print("--------", x.shape
 
     if file_type == "binary":
         x = read_binary_emb_file(file_path=embedding_file, nodelist=nodelist)
@@ -127,13 +125,8 @@ def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, cl
     #print("Basladi 2")
 
 
-    #x = x[nodelist, :] #x = np.take(x, nodelist, axis=0)
-    #print(x.shape)
-    
-
     label_matrix = [[1 if k in node2community[str(node)] else 0 for k in range(K)] for node in nodelist]
     label_matrix = csr_matrix(label_matrix)
-    print(label_matrix.shape)
 
     results = {}
 
