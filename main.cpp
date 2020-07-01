@@ -8,15 +8,16 @@
 #include "Graph.h"
 #include "Model.h"
 #include "Utilities.h"
+#include <fstream>
 
 using namespace std;
 using namespace Eigen;
 
-void scale(Eigen::SparseMatrix<float, Eigen::RowMajor> &mat);
+void scale(Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> &mat);
 
 //void ppmi_matrix(Eigen::MatrixXf &Mat);
 template<typename T>
-void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor> &Mat);
+void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor, ptrdiff_t> &Mat);
 
 int main(int argc, char** argv) {
 
@@ -55,6 +56,16 @@ int main(int argc, char** argv) {
         return 0;
     }
 
+    cout << "------------------------------------" << endl;
+    cout << "Walk length: " << walkLen << endl;
+    cout << "Dimension: " << dimension << endl;
+    cout << "Prob: " << contProb << endl;
+    cout << "------------------------------------" << endl;
+
+    auto start_time = chrono::steady_clock::now();
+
+    Eigen::initParallel();
+
     typedef float T;
 
     Graph g = Graph(directed);
@@ -66,7 +77,7 @@ int main(int argc, char** argv) {
     // Get edge triplets
     vector <Triplet<T>> edgesTriplets = g.getEdges<T>();
     // Construct the adjacency matrix
-    Eigen::SparseMatrix<float, Eigen::RowMajor> A(numOfNodes, numOfNodes);
+    Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> A(numOfNodes, numOfNodes);
     A.setFromTriplets(edgesTriplets.begin(), edgesTriplets.end());
 
     // Normalize the adjacency matrix
@@ -74,15 +85,21 @@ int main(int argc, char** argv) {
     scale(A);
     cout << "\t- Completed!" << endl;
 
+    /*
+    MatrixXf A1 = MatrixXf(A);
+    for(int i=0; i<numOfNodes; i++)
+        cout << A1(0, i) << " ";
+    cout << endl;
+    */
     // Construct zero matrix
-    Eigen::SparseMatrix<float, Eigen::RowMajor> X(numOfNodes, numOfNodes);
+    Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> X(numOfNodes, numOfNodes);
 
     // Construct the identity matrix
-    Eigen::SparseMatrix<float, Eigen::RowMajor> P(numOfNodes, numOfNodes);
+    Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> P(numOfNodes, numOfNodes);
     P.setIdentity();
 
     // Construct another identity matrix
-    Eigen::SparseMatrix<float, Eigen::RowMajor> P0(numOfNodes, numOfNodes);
+    Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> P0(numOfNodes, numOfNodes);
     P0.setIdentity();
 
 
@@ -96,6 +113,12 @@ int main(int argc, char** argv) {
         P = (contProb)*P + (1-contProb)*P0;
         X = X + P;
     }
+    /*
+    MatrixXf A2 = MatrixXf(X);
+    for(int i=0; i<numOfNodes; i++)
+        cout << A2(0, i) << " "; 
+    cout << endl;
+    */
     if(verbose)
         cout << "\t- Completed!" << endl;
 
@@ -104,7 +127,29 @@ int main(int argc, char** argv) {
     ppmi_matrix<float>(X);
     if(verbose)
         cout << "\t- Completed!" << endl;
+    
+    /*
+    MatrixXf A3 = MatrixXf(X);
+    for(int i=0; i<numOfNodes; i++)
+        cout << A3(0, i) << " "; 
+    cout << endl;
+    */
 
+    /*
+    cout << "Writing..." << endl;
+    MatrixXf myT = MatrixXf(X); 
+    ofstream outfile ("../karate_cpp_pmi.txt");
+    for (int r=0; r<numOfNodes; r++) {
+        for (int c=0; c< numOfNodes; c++)
+        {
+        outfile << myT(r,c);
+        outfile << " ";
+        }
+        outfile << "\n";
+    }
+    outfile.close();
+    cout << "-----" << endl;
+    */
     Model<T> m(numOfNodes, dimension, verbose);
 
     if(verbose)
@@ -121,12 +166,16 @@ int main(int argc, char** argv) {
         cout << "\t- Completed!" << endl;
 
 
+    auto end_time = chrono::steady_clock::now();
+    if(verbose)
+        cout << "+ Total elapsed time: " << chrono::duration_cast<chrono::seconds>(end_time - start_time).count() << "secs." << endl;
+
     return 0;
 
 }
 
 
-void scale(Eigen::SparseMatrix<float, Eigen::RowMajor> &mat) {
+void scale(Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> &mat) {
 
     auto maxValue = mat.coeffs().maxCoeff();
     mat = mat / maxValue;
@@ -145,11 +194,11 @@ void scale(Eigen::SparseMatrix<float, Eigen::RowMajor> &mat) {
     float rowSum;
     for(int i=0; i<mat.outerSize(); i++) {
         rowSum = 0;
-        for(Eigen::SparseMatrix<float, Eigen::RowMajor>::InnerIterator it(mat, i); it; ++it)
+        for(Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t>::InnerIterator it(mat, i); it; ++it)
             rowSum += it.value();
 
         if(rowSum != 0) {
-            for(Eigen::SparseMatrix<float, Eigen::RowMajor>::InnerIterator it(mat, i); it; ++it)
+            for(Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t>::InnerIterator it(mat, i); it; ++it)
                 it.valueRef() = it.valueRef() / rowSum;
         }
     }
@@ -158,35 +207,69 @@ void scale(Eigen::SparseMatrix<float, Eigen::RowMajor> &mat) {
 }
 
 template<typename T>
-void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor> &Mat) {
+void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor, ptrdiff_t> &Mat) {
 
     // Positive Pointwise Mutual Information matrix
     T *rowSums = new T[Mat.rows()];
     T *colSums = new T[Mat.cols()];
     T totalSum = 0;
 
+    for (int row=0; row < Mat.rows(); row++)
+        rowSums[row] = 0.0;
+
+    for (int col=0; col < Mat.cols(); col++)
+        colSums[col] = 0.0;
+
+
+    scale(Mat);
+
     for (int row=0; row < Mat.rows(); ++row) {
-        for (typename SparseMatrix<T, RowMajor>::InnerIterator it(Mat, row); it; ++it) {
-            rowSums[row] += it.value();
+        for (typename SparseMatrix<T, RowMajor, ptrdiff_t>::InnerIterator it(Mat, row); it; ++it) {
+            if(it.col() == row) {
+               it.valueRef() = 0;
+            } else {
+               rowSums[row] += it.value();
+               colSums[it.col()] += it.value();
+               totalSum += it.value();
+            }
+        }
+        /*
+        for (typename SparseMatrix<T, RowMajor, ptrdiff_t>::InnerIterator it(Mat, row); it; ++it) {
+            if(row == 0 && it.col() ==0)
+                cout << "YETERRRR: " << it.value() << endl;
+
+            if(it.col() == row)
+                it.valueRef() = 0;
+            else
+                it.valueRef() = it.value() / rowSums[row];
             colSums[it.col()] += it.value();
             totalSum += it.value();
         }
+        rowSums[row] = 1.0;
+        */
     }
+    cout << "Totsl sum: " << totalSum << endl;
 
     T value;
     vector <Triplet<T>> valueTriplets;
     for (unsigned int row=0; row < Mat.rows(); ++row) {
-        for (typename SparseMatrix<T, RowMajor>::InnerIterator it(Mat, row); it; ++it) {
-            value = log( (totalSum*it.value()) / (rowSums[row]*colSums[it.col()]) );
-            if(value > 0)
-                valueTriplets.push_back(Triplet<T>(row, it.col(), totalSum));
+        for (typename SparseMatrix<T, RowMajor, ptrdiff_t>::InnerIterator it(Mat, row); it; ++it) {
+            if (row == 0)
+                cout << it.col() << " " << it.value() << endl;
+            if(it.value() > 0) {
+                value = log( (totalSum*it.value()) / (rowSums[row]*colSums[it.col()]) );
+                if(value > 0) {
+                    valueTriplets.push_back(Triplet<T>(row, it.col(), value));
+                    //cout << value << " " << endl;
+                }
+            }
         }
     }
 
     delete [] rowSums;
     delete [] colSums;
 
-    Eigen::SparseMatrix<T, RowMajor> tempMat(Mat.rows(), Mat.cols());
+    Eigen::SparseMatrix<T, RowMajor, ptrdiff_t> tempMat(Mat.rows(), Mat.cols());
     tempMat.setFromTriplets(valueTriplets.begin(), valueTriplets.end());
 
 

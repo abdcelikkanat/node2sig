@@ -34,7 +34,12 @@ def split_train_test(g, test_ratio):
 	test_g = train_g.copy()
 
 	# Split it into two "disjoint" parts
+<<<<<<< HEAD
 	for edge in g.edges():
+=======
+	edges = list(train_g.edges())
+	for edge in edges:
+>>>>>>> 4c2410df82583108d45234d551042650277ca759
 		if np.random.rand() < test_ratio:
 			train_g.remove_edge(edge[0], edge[1])
 		else:
@@ -257,7 +262,13 @@ if sys.argv[1] == 'split':
 	print("Graph path: {}".format(graph_path))
 	print("Output folder path: {}".format(output_folder))
 
+<<<<<<< HEAD
 	split(graph_path, output_folder)
+=======
+	#split(graph_path, output_folder)
+	g = nx.read_gml(graph_path)
+	print(g.number_of_nodes())
+>>>>>>> 4c2410df82583108d45234d551042650277ca759
 
 elif sys.argv[1] == 'predict':
 

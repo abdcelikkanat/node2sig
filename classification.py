@@ -12,6 +12,10 @@ from scipy.spatial.distance import squareform
 from scipy.spatial.distance import pdist
 from scipy.spatial.distance import cdist
 import sys
+import warnings
+from sklearn.exceptions import DataConversionWarning
+warnings.filterwarnings(action='ignore', category=DataConversionWarning)
+
 
 _score_types = ['micro', 'macro']
 
@@ -31,44 +35,56 @@ def detect_number_of_communities(nxg):
             max_community_label = c_max
     return max_community_label + 1
 
+def read_embedding_file(embedding_file_path, nodelist):
+    # Read the the embeddings
 
-def read_binary_emb_file(file_path):
+    with open(embedding_file_path, 'r') as f:
+        # Read the first line
+        N, dim = (int(v) for v in f.readline().strip().split())
+        node2embedding=[[] for _ in range(len(nodelist))]
+        mapping = {node: nodeIdx for nodeIdx, node in enumerate(nodelist)}
+        # Read embeddings
+        for line in f.readlines():
+            tokens = line.strip().split()
+            if int(tokens[0]) in nodelist:
+                node2embedding[mapping[int(tokens[0])]] = [float(value) for value in tokens[1:]]
+
+    return np.asarray(node2embedding)
+
+def read_binary_emb_file(file_path, nodelist=None):
 
     def _int2boolean(num):
 
         binary_repr = []
         for _ in range(8):
 
-            binary_repr.append(False if num % 2 else True )
+            binary_repr.append(True if num % 2 else False )
 
             num = num >> 1
 
         return binary_repr
 
+    embs = [[] for _ in range(len(nodelist))]
+    mapping = {node: nodeIdx for nodeIdx, node in enumerate(nodelist)}
     with open(file_path, 'rb') as f:
-        '''' 
-        arr.fromfile(f)
 
-        t = arr.length()
-        print(arr)
-        print(t)
-        '''
         num_of_nodes = int.from_bytes(f.read(4), byteorder='little')
         dim = int.from_bytes(f.read(4), byteorder='little')
 
-        print("{} {}".format(num_of_nodes, dim));
+        #print("{} {}".format(num_of_nodes, dim));
         dimInBytes = int(dim / 8)
 
-        embs = []
         for i in range(num_of_nodes):
             # embs.append(int.from_bytes( f.read(dimInBytes), byteorder='little' ))
             emb = []
             for _ in range(dimInBytes):
                 emb.extend(_int2boolean(int.from_bytes(f.read(1), byteorder='little')))
+                #emb.extend(np.asarray( _int2boolean(int.from_bytes(f.read(1), byteorder='little') ), dtype=bool) )
             #print(len(emb))
-            embs.append(emb)
+            if i in nodelist:
+                embs[mapping[i]] = emb
 
-    print("=", len(embs[0]))
+    #print("=", len(embs[0]))
     return np.asarray(embs, dtype=bool)
 
 
@@ -84,26 +100,40 @@ def get_node2community(nxg):
 
     return node2community
 
-def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, classification_method):
+def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, classification_method, file_type="binary"):
+    #print("Basladi")
+    cache_size = 10240
 
     g = nx.read_gml(graph_path)
-    x = read_binary_emb_file(file_path=embedding_file)
 
     node2community = get_node2community(g)
+    #print("Basladi 3")
 
     # N = g.number_of_nodes()
     K = detect_number_of_communities(g)
-
+    print("K: {}".format(K))
     # nodelist = [node for node in g.nodes()]
     nodelist = [int(node) for node in node2community]
-    N = len(nodelist)
+    #nodelist.sort()
 
+    N = len(nodelist)
+    print("N: {}".format(N))
     #print("--------", x.shape)
-    x = x[nodelist, :] #x = np.take(x, nodelist, axis=0)
+
+    if file_type == "binary":
+        x = read_binary_emb_file(file_path=embedding_file, nodelist=nodelist)
+    else:
+        x = read_embedding_file(embedding_file, nodelist=nodelist)
+    #print("Basladi 2")
+
+
+    #x = x[nodelist, :] #x = np.take(x, nodelist, axis=0)
+    #print(x.shape)
+    
 
     label_matrix = [[1 if k in node2community[str(node)] else 0 for k in range(K)] for node in nodelist]
     label_matrix = csr_matrix(label_matrix)
-
+    print(label_matrix.shape)
 
     results = {}
 
@@ -112,50 +142,48 @@ def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, cl
         for ratio in training_ratios:
             results[score_t].update({ratio: []})
 
+
+    print("+ Similarity matrix is begin computed!")
+    if classification_method == "svm-hamming":
+        sim = 1.0 - cdist(x, x, 'hamming')
+    elif classification_method == "svm-cosine":
+        sim = 1.0 - cdist(x, x, 'cosine')
+    else:
+        raise ValueError("Invalid classification method name: {}".format(classification_method))
+
+    #print("\t- Completed!")
+    
+
     for train_ratio in training_ratios:
 
-        for _ in range(number_of_shuffles):
+        for shuffleIdx in range(number_of_shuffles):
+
+            print("Current train ratio: {} - shuffle: {}/{}".format(train_ratio, shuffleIdx+1, number_of_shuffles))
+
             # Shuffle the data
-            shuffled_features, shuffled_labels = shuffle(x, label_matrix)
+            shuffled_idx = np.random.permutation(N)
+            shuffled_sim = sim[shuffled_idx, :]
+            shuffled_sim = shuffled_sim[:, shuffled_idx]
+            shuffled_labels = label_matrix[shuffled_idx]
 
             # Get the training size
             train_size = int(train_ratio * N)
             # Divide the data into the training and test sets
-            train_features = shuffled_features[0:train_size, :]
+            train_sim = shuffled_sim[0:train_size, :]
+            train_sim = train_sim[:, 0:train_size]
             train_labels = shuffled_labels[0:train_size]
 
-            test_features = shuffled_features[train_size:, :]
+            test_sim = shuffled_sim[train_size:, :]
+            test_sim = test_sim[:, 0:train_size]
             test_labels = shuffled_labels[train_size:]
 
             # Train the classifier
-            if classification_method == "logistic":
-                ovr = OneVsRestClassifier(LogisticRegression(solver='liblinear'))
-            elif classification_method == "svm-rbf":
-                ovr = OneVsRestClassifier(SVC(kernel="rbf", cache_size=4096, probability=True))
+            ovr = OneVsRestClassifier(SVC(kernel="precomputed", cache_size=cache_size, probability=True))
 
-            elif classification_method == "svm-hamming":
-                ovr = OneVsRestClassifier(SVC(kernel="precomputed", cache_size=4096, probability=True))
-                _train_features = train_features.copy()
-                _test_features = test_features.copy()
-
-                train_features = 1.0 - cdist(_train_features, _train_features, 'hamming')
-                test_features = 1.0 - cdist(_test_features, _train_features, 'hamming')
-
-            elif classification_method == "svm-hamming-cosine":
-                ovr = OneVsRestClassifier(SVC(kernel="precomputed", cache_size=4096, probability=True))
-                _train_features = train_features.copy()
-                _test_features = test_features.copy()
-
-                train_features = 1.0 - cdist(_train_features, _train_features, 'cosine')
-                test_features = 1.0 - cdist(_test_features, _train_features, 'cosine')
-
-            else:
-                raise ValueError("Invalid classification method name: {}".format(classification_method))
-
-            ovr.fit(train_features, train_labels)
+            ovr.fit(train_sim, train_labels)
 
             # Find the predictions, each node can have multiple labels
-            test_prob = np.asarray(ovr.predict_proba(test_features))
+            test_prob = np.asarray(ovr.predict_proba(test_sim))
             y_pred = []
             for i in range(test_labels.shape[0]):
                 k = test_labels[i].getnnz()  # The number of labels to be predicted
@@ -175,7 +203,6 @@ def evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, cl
                                  average=score_t)
 
                 results[score_t][train_ratio].append(score)
-
 
     return results
 
@@ -237,21 +264,26 @@ if __name__ == "__main__":
         training_ratios = [i for i in np.arange(0.1, 1, 0.1)]
     elif sys.argv[5] == "all":
         training_ratios = [i for i in np.arange(0.01, 0.1, 0.01)] + [i for i in np.arange(0.1, 1, 0.1)]
+    elif sys.argv[5] == "custom":
+        training_ratios = [0.9]
     else:
         raise ValueError("Invalid training ratio")
 
     classification_method = sys.argv[6]
 
+    file_type = sys.argv[7]
+
     print("---------------------------------------")
     print("Graph path: {}".format(graph_path))
     print("Emb path: {}".format(embedding_file))
+    print("Output path: {}".format(output_file))
     print("Num of shuffles: {}".format(number_of_shuffles))
     print("Training ratios: {}".format(training_ratios))
     print("Classification method: {}".format(classification_method))
+    print("File type {}".format(file_type))
     print("---------------------------------------")
 
-
-    results = evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, classification_method)
+    results = evaluate(graph_path, embedding_file, number_of_shuffles, training_ratios, classification_method, file_type=file_type)
 
     print_results(results=results, shuffle_std=False, detailed=False)
     save_results(results, output_file, shuffle_std=False, detailed=False)
