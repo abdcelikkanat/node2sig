@@ -254,8 +254,7 @@ void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor, ptrdiff_t> &Mat) {
     vector <Triplet<T>> valueTriplets;
     for (unsigned int row=0; row < Mat.rows(); ++row) {
         for (typename SparseMatrix<T, RowMajor, ptrdiff_t>::InnerIterator it(Mat, row); it; ++it) {
-            if (row == 0)
-                cout << it.col() << " " << it.value() << endl;
+
             if(it.value() > 0) {
                 value = log( (totalSum*it.value()) / (rowSums[row]*colSums[it.col()]) );
                 if(value > 0) {
