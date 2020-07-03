@@ -149,7 +149,7 @@ void Model<T>::encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t>
 
     fstream fs(filePath, fstream::out | fstream::binary);
     ////////
-    fstream fsYeni("../nodesig_textformat.embedding", fstream::out);
+    //fstream fsYeni("../nodesig_textformat.embedding", fstream::out);
     ////////
     if(fs.is_open()) {
 
@@ -180,15 +180,17 @@ void Model<T>::encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t>
                 if (nodeVect.coeff(d) > 0)
                     bin[int(d/8)] += 1;
                 ////////
+                /*
                 if(nodeVect.coeff(d) > 0)
                     fsYeni << "1 ";
                 else
                     fsYeni << "0 ";
+                */
                 ///////
 
             }
             ////////
-            fsYeni << endl;
+            //fsYeni << endl;
             //////////
 
             copy(bin.begin(), bin.end(), std::ostreambuf_iterator<char>(fs));
