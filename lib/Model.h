@@ -50,7 +50,7 @@ public:
     void encodeByRow(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &X, string filePath);
     void encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &X, string filePath);
     void encodeByWeightBlock(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &X, string filePath, int weightBlockSize);
-    void encodeSequential(bool header, Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &x, fstream &fs);
+    void encodeSequential(bool header, Eigen::MatrixXf &x, fstream &fs);
 
 
 };
@@ -207,7 +207,7 @@ void Model<T>::encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t>
 
 
 template<typename T>
-void Model<T>::encodeSequential(bool header, Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &x, fstream &fs) {
+void Model<T>::encodeSequential(bool header, Eigen::MatrixXf &x, fstream &fs) {
 
     cout << "Number of threads: " << Eigen::nbThreads( ) << endl;
 
@@ -239,7 +239,7 @@ void Model<T>::encodeSequential(bool header, Eigen::SparseMatrix<T, Eigen::RowMa
             cout << "\t- Elapsed time for multiplication: "<< chrono::duration_cast<chrono::seconds>(end_time - start_time).count() << endl;
 
 
-        for(unsigned int currentRowIdx=0; currentRowIdx < x.outerSize(); currentRowIdx++) {
+        for(unsigned int currentRowIdx=0; currentRowIdx < x.rows(); currentRowIdx++) {
 
             Eigen::VectorXf nodeVect = matrixProd.row(currentRowIdx);
 
@@ -249,7 +249,6 @@ void Model<T>::encodeSequential(bool header, Eigen::SparseMatrix<T, Eigen::RowMa
                 if (nodeVect.coeff(d) > 0)
                     bin[int(d/8)] += 1;
             }
-
             copy(bin.begin(), bin.end(), std::ostreambuf_iterator<char>(fs));
 
         }

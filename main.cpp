@@ -164,9 +164,9 @@ int main(int argc, char** argv) {
                 numOfLines = (int)numOfNodes - initialBlockPosition;
 
             // Construct zero matrix
-            Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> x(numOfLines, numOfNodes);
+            MatrixXf x(numOfLines, numOfNodes);
 
-            Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> p = P.middleRows(initialBlockPosition, numOfLines);
+            MatrixXf p = P.middleRows(initialBlockPosition, numOfLines);
             //Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> p = P(seq(initialBlockPosition, lastBlockPosition), all)
             /*
             for(int i=0; i<p.outerSize(); i++) {
@@ -187,6 +187,7 @@ int main(int argc, char** argv) {
                 cout << "\t- Completed!" << endl;
 
             // Normalize row sums
+            /*
             T rowSum;
             for(int i=0; i<x.outerSize(); i++) {
                 rowSum = 0;
@@ -198,6 +199,7 @@ int main(int argc, char** argv) {
                         it.valueRef() = it.valueRef() / rowSum;
                 }
             }
+            */
 
             m.encodeSequential(!(bool)currentBlockIdx, x, fs);
 
