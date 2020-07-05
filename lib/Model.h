@@ -223,8 +223,9 @@ void Model<T>::encodeSequential(bool header, Eigen::MatrixXf &x, fstream &fs) {
 
         // Write the header if the header is
         if(header) {
+            cout << "Weight are being generated!" << endl;
             _generateWeights(this->_numOfNodes, this->_dim);
-
+            cout << "Completed!" << endl;
             fs.write(reinterpret_cast<const char *>(&_numOfNodes), _headerBlockSize);
             fs.write(reinterpret_cast<const char *>(&_dim), _headerBlockSize);
         }
@@ -232,7 +233,9 @@ void Model<T>::encodeSequential(bool header, Eigen::MatrixXf &x, fstream &fs) {
         auto start_time = chrono::steady_clock::now();
 
         // Compute the matrix multiplication
+        cout << "Matrix factorization is being generated!" << endl;
         matrixProd = x * _weights;
+        cout << "Completed!" << endl;
 
         auto end_time = chrono::steady_clock::now();
         if(_verbose)
