@@ -209,6 +209,8 @@ void Model<T>::encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t>
 template<typename T>
 void Model<T>::encodeSequential(bool header, Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &x, fstream &fs) {
 
+    cout << "Number of threads: " << Eigen::nbThreads( ) << endl;
+
 
     if(_verbose)
         cout << "\t- Approach is 'Sequential'." << endl;
