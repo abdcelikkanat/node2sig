@@ -50,7 +50,7 @@ public:
     void encodeByRow(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &X, string filePath);
     void encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &X, string filePath);
     void encodeByWeightBlock(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &X, string filePath, int weightBlockSize);
-
+    void encodeSequential(bool header, Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &x, fstream &fs);
 
 
 };
@@ -205,6 +205,60 @@ void Model<T>::encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t>
 
 }
 
+
+template<typename T>
+void Model<T>::encodeSequential(bool header, Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &x, fstream &fs) {
+
+
+    if(_verbose)
+        cout << "\t- Approach is 'Sequential'." << endl;
+
+    //fstream fs(filePath, fstream::out | fstream::binary);
+
+    if(fs.is_open()) {
+
+        Eigen::MatrixXf matrixProd(_numOfNodes, _dim);
+
+        // Write the header if the header is
+        if(header) {
+            _generateWeights(this->_numOfNodes, this->_dim);
+
+            fs.write(reinterpret_cast<const char *>(&_numOfNodes), _headerBlockSize);
+            fs.write(reinterpret_cast<const char *>(&_dim), _headerBlockSize);
+        }
+        // Get the current time
+        auto start_time = chrono::steady_clock::now();
+
+        // Compute the matrix multiplication
+        matrixProd = x * _weights;
+
+        auto end_time = chrono::steady_clock::now();
+        if(_verbose)
+            cout << "\t- Elapsed time for multiplication: "<< chrono::duration_cast<chrono::seconds>(end_time - start_time).count() << endl;
+
+
+        for(unsigned int currentRowIdx=0; currentRowIdx < x.outerSize(); currentRowIdx++) {
+
+            Eigen::VectorXf nodeVect = matrixProd.row(currentRowIdx);
+
+            vector<uint8_t> bin(_dim/8, 0);
+            for (unsigned int d = 0; d < _dim; d++) {
+                bin[int(d/8)] <<= 1;
+                if (nodeVect.coeff(d) > 0)
+                    bin[int(d/8)] += 1;
+            }
+
+            copy(bin.begin(), bin.end(), std::ostreambuf_iterator<char>(fs));
+
+        }
+
+        fs.close();
+
+    } else {
+        cout << "+ An error occurred during opening the file!" << endl;
+    }
+
+}
 
 template<typename T>
 void Model<T>::encodeByWeightBlock(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &X, string filePath, int weightBlockSize) {

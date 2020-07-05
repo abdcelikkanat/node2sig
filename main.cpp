@@ -43,11 +43,12 @@ int main(int argc, char** argv) {
     float contProb = 0.98;
     int featureBlockSize = 0;
     int weightBlockSize = 0;
+    int nodesBlockSize = 0;
     bool verbose = true;
 
 
     int err_code =  parse_arguments(argc, argv, edgeFile, embFile, walkLen,
-            dimension, contProb, featureBlockSize, weightBlockSize, verbose);
+            dimension, contProb, featureBlockSize, weightBlockSize, nodesBlockSize, verbose);
 
 
     if(err_code != 0) {
@@ -60,6 +61,9 @@ int main(int argc, char** argv) {
     cout << "Walk length: " << walkLen << endl;
     cout << "Dimension: " << dimension << endl;
     cout << "Prob: " << contProb << endl;
+    cout << "Feature Block Size: " << featureBlockSize << endl;
+    cout << "Weight Block Size: " << weightBlockSize << endl;
+    cout << "Nodes Block Size: " << nodesBlockSize << endl;
     cout << "------------------------------------" << endl;
 
     auto start_time = chrono::steady_clock::now();
@@ -85,15 +89,6 @@ int main(int argc, char** argv) {
     scale(A);
     cout << "\t- Completed!" << endl;
 
-    /*
-    MatrixXf A1 = MatrixXf(A);
-    for(int i=0; i<numOfNodes; i++)
-        cout << A1(0, i) << " ";
-    cout << endl;
-    */
-    // Construct zero matrix
-    Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> X(numOfNodes, numOfNodes);
-
     // Construct the identity matrix
     Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> P(numOfNodes, numOfNodes);
     P.setIdentity();
@@ -102,73 +97,118 @@ int main(int argc, char** argv) {
     Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> P0(numOfNodes, numOfNodes);
     P0.setIdentity();
 
+    if(nodesBlockSize == 0) {
+        // Construct zero matrix
+        Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> X(numOfNodes, numOfNodes);
 
-    // Random walk
-    if(verbose)
-        cout << "+ Random walks are being performed." << endl;
-    for(unsigned int l=0; l<walkLen; l++) {
-        if(verbose)
-            cout << "\t- Current walk: " << l+1 << endl;
-        P = P * A;
-        P = (contProb)*P + (1-contProb)*P0;
-        X = X + P;
-    }
-    /*
-    MatrixXf A2 = MatrixXf(X);
-    for(int i=0; i<numOfNodes; i++)
-        cout << A2(0, i) << " "; 
-    cout << endl;
-    */
-    if(verbose)
-        cout << "\t- Completed!" << endl;
-
-    if(verbose)
-        cout << "+ Positive Pointwise Mutual Information (PPMI) is being computed." << endl;
-    ppmi_matrix<float>(X);
-    if(verbose)
-        cout << "\t- Completed!" << endl;
-    
-    /*
-    MatrixXf A3 = MatrixXf(X);
-    for(int i=0; i<numOfNodes; i++)
-        cout << A3(0, i) << " "; 
-    cout << endl;
-    */
-
-    /*
-    cout << "Writing..." << endl;
-    MatrixXf myT = MatrixXf(X); 
-    ofstream outfile ("../karate_cpp_pmi.txt");
-    for (int r=0; r<numOfNodes; r++) {
-        for (int c=0; c< numOfNodes; c++)
-        {
-        outfile << myT(r,c);
-        outfile << " ";
+        // Random walk
+        if (verbose)
+            cout << "+ Random walks are being performed." << endl;
+        for (unsigned int l = 0; l < walkLen; l++) {
+            if (verbose)
+                cout << "\t- Current walk: " << l + 1 << endl;
+            P = P * A;
+            P = (contProb) * P + (1 - contProb) * P0;
+            X = X + P;
         }
-        outfile << "\n";
+        if (verbose)
+            cout << "\t- Completed!" << endl;
+
+        if (verbose)
+            cout << "+ Positive Pointwise Mutual Information (PPMI) is being computed." << endl;
+        ppmi_matrix<float>(X);
+        if (verbose)
+            cout << "\t- Completed!" << endl;
+
+
+        Model<T> m(numOfNodes, dimension, verbose);
+        if (verbose)
+            cout << "+ The hash codes are being generated." << endl;
+        if (featureBlockSize == 0 && weightBlockSize == 0)
+            m.encodeAllInOne(X, embFile);
+        else if (featureBlockSize == 1 && weightBlockSize == 0)
+            m.encodeByRow(X, embFile);
+        else if (weightBlockSize > 0)
+            m.encodeByWeightBlock(X, embFile, weightBlockSize);
+        else
+            cout << "Invalid settings!" << endl;
+        if (verbose)
+            cout << "\t- Completed!" << endl;
+
+    } else {
+
+        fstream fs;
+
+        Model<T> m(numOfNodes, dimension, verbose);
+
+        int numOfNodesBlocks = (int)numOfNodes / nodesBlockSize+1;
+        // Random walk
+        if (verbose)
+            cout << "+ Random walks are being performed." << endl;
+
+        int initialBlockPosition, lastBlockPosition, numOfLines;
+        for(int currentBlockIdx=0; currentBlockIdx<numOfNodesBlocks; currentBlockIdx++) {
+
+            if(verbose)
+                cout << "Current Nodes Block Id: " << currentBlockIdx+1 << "/" << numOfNodesBlocks << endl;
+
+            if(currentBlockIdx == 0)
+                fs = fstream(embFile, fstream::out | fstream::binary);
+            else
+                fs = fstream(embFile, ios_base::app | fstream::binary);
+
+            initialBlockPosition = currentBlockIdx * nodesBlockSize;
+            lastBlockPosition = (currentBlockIdx+1)*nodesBlockSize;
+            numOfLines = nodesBlockSize;
+            if(lastBlockPosition > numOfNodes)
+                numOfLines = (int)numOfNodes - initialBlockPosition;
+
+            // Construct zero matrix
+            Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> x(numOfLines, numOfNodes);
+
+            Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> p = P.middleRows(initialBlockPosition, numOfLines);
+            //Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> p = P(seq(initialBlockPosition, lastBlockPosition), all)
+            /*
+            for(int i=0; i<p.outerSize(); i++) {
+                for (Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t>::InnerIterator it(p, i); it; ++it)
+                    cout << "R: " << it.row() << " C: " << it.col() << endl;
+            }
+            */
+
+            /* Random Walks */
+            for (unsigned int l = 0; l < walkLen; l++) {
+                if (verbose)
+                    cout << "\t- Current walk: " << l + 1 << endl;
+                p = p * A;
+                //p = (contProb) * p + (1 - contProb) * P0;
+                x = x + p;
+            }
+            if (verbose)
+                cout << "\t- Completed!" << endl;
+
+            // Normalize row sums
+            T rowSum;
+            for(int i=0; i<x.outerSize(); i++) {
+                rowSum = 0;
+                for(Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t>::InnerIterator it(x, i); it; ++it)
+                    rowSum += it.value();
+
+                if(rowSum != 0) {
+                    for(Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t>::InnerIterator it(x, i); it; ++it)
+                        it.valueRef() = it.valueRef() / rowSum;
+                }
+            }
+
+            m.encodeSequential(!(bool)currentBlockIdx, x, fs);
+
+
+        }
+
     }
-    outfile.close();
-    cout << "-----" << endl;
-    */
-    Model<T> m(numOfNodes, dimension, verbose);
-
-    if(verbose)
-        cout << "+ The hash codes are being generated." << endl;
-    if(featureBlockSize == 0 && weightBlockSize ==0)
-        m.encodeAllInOne(X, embFile);
-    else if(featureBlockSize == 1 && weightBlockSize ==0)
-        m.encodeByRow(X, embFile);
-    else if(weightBlockSize > 0)
-        m.encodeByWeightBlock(X, embFile, weightBlockSize);
-    else
-        cout << "Invalid settings!" << endl;
-    if(verbose)
-        cout << "\t- Completed!" << endl;
-
-
-    auto end_time = chrono::steady_clock::now();
-    if(verbose)
-        cout << "+ Total elapsed time: " << chrono::duration_cast<chrono::seconds>(end_time - start_time).count() << "secs." << endl;
+        auto end_time = chrono::steady_clock::now();
+        if (verbose)
+            cout << "+ Total elapsed time: " << chrono::duration_cast<chrono::seconds>(end_time - start_time).count()
+                 << "secs." << endl;
 
     return 0;
 

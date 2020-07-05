@@ -23,35 +23,44 @@ def jaccard_dist(num1, num2, dim):
 
 
 
-def read_emb_file(file_path):
+def read_binary_emb_file(file_path):
+
+    def _int2boolean(num):
+
+        binary_repr = []
+        for _ in range(8):
+
+            binary_repr.append(True if num % 2 else False )
+            num = num >> 1
+
+        return binary_repr[::-1]
+
 
     with open(file_path, 'rb') as f:
-        '''' 
-        arr.fromfile(f)
-    
-        t = arr.length()
-        print(arr)
-        print(t)
-        '''
+
         num_of_nodes = int.from_bytes(f.read(4), byteorder='little')
         dim = int.from_bytes(f.read(4), byteorder='little')
 
-        print("{} {}".format(num_of_nodes, dim));
-
-        dimInBytes = int(dim/8)
         embs = []
+
+        dimInBytes = int(dim / 8)
+
         for i in range(num_of_nodes):
-            #embs.append(int.from_bytes( f.read(dimInBytes), byteorder='little' ))
-            embs.append( [int.from_bytes(f.read(1), byteorder='little' ) for _ in range(dimInBytes)])
+            # embs.append(int.from_bytes( f.read(dimInBytes), byteorder='little' ))
+            emb = []
+            for _ in range(dimInBytes):
+                emb.extend(_int2boolean(int.from_bytes(f.read(1), byteorder='little')))
 
-    return embs
+            embs.append(emb)
+
+    return np.asarray(embs, dtype=bool)
 
 
-file_path = "./deneme.embedding"
+file_path = "./karate.embedding"
 
-embs = read_emb_file(file_path)
+embs = read_binary_emb_file(file_path)
 
-#print(embs)
+print("Number of nodes: {} Dimension: {}".format(embs.shape[0], embs.shape[1]))
 print(embs[0])
 print(embs[-1])
 
