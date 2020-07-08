@@ -8,7 +8,6 @@
 #include <vector>
 #include <algorithm>
 #include <limits>
-#define EIGEN_USE_MKL_ALL
 #include <Eigen/Sparse>
 //#include "Matrix.h"
 

@@ -7,7 +7,6 @@
 #include <fstream>
 #include <string>
 #include "Graph.h"
-#include "mkl.h"
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
 #include <bitset>
@@ -37,7 +36,7 @@ class Model {
 private:
     unsigned int _dim;
     unsigned int _numOfNodes;
-    Eigen::MatrixXf _weights;
+    T **_weights; //Eigen::MatrixXf _weights;
     bool _verbose;
     int _headerBlockSize = 4; // in bytes
     random_device _rd;
@@ -51,9 +50,82 @@ public:
     void encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &X, string filePath);
     void encodeByWeightBlock(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &X, string filePath, int weightBlockSize);
     void encodeSequential(bool header, Eigen::MatrixXf &x, fstream &fs);
-
+    void learnEmb(vector <vector <pair<unsigned int, T>>> P, int walkLen, string filePath);
 
 };
+
+template<typename T>
+void Model<T>::learnEmb(vector <vector <pair<unsigned int, T>>> P, int walkLen, string filePath) {
+
+    this->_generateWeights(this->_numOfNodes, this->_dim);
+
+
+    T **current = new T*[this->_numOfNodes];
+    for(unsigned int node=0; node < this->_numOfNodes; node++)
+        current[node] = new T[this->_dim]{0};
+
+    for(int l=0; l<walkLen; l++) {
+
+        cout << "Current Walk: " << l+1 << "/" << walkLen << endl;
+
+        T **temp = new T*[this->_numOfNodes];
+        for(unsigned int node=0; node < this->_numOfNodes; node++)
+            temp[node] = new T[this->_dim]{0};
+
+        #pragma omp parallel for
+        for(unsigned node=0; node<this->_numOfNodes; node++) {
+
+            for(int d=0; d<this->_dim; d++) {
+                temp[node][d] = 0;
+                for(unsigned int nbIdx=0; nbIdx<P[node].size(); nbIdx++)
+                    temp[node][d] += ( current[get<0>(P[node][nbIdx])][d] + this->_weights[get<0>(P[node][nbIdx])][d] )*get<1>(P[node][nbIdx] );
+            }
+
+        }
+
+        for(unsigned int node=0; node < this->_numOfNodes; node++)
+            delete[] current[node];
+        delete [] current;
+        current = temp;
+
+    }
+
+    /*
+    for(unsigned int node=0; node < this->_numOfNodes; node++) {
+        delete [] temp[node];
+    delete [] temp;
+    */
+
+    fstream fs(filePath, fstream::out | fstream::binary);
+    if(fs.is_open()) {
+
+        // Write the header
+        fs.write(reinterpret_cast<const char *>(&_numOfNodes), _headerBlockSize);
+        fs.write(reinterpret_cast<const char *>(&_dim), _headerBlockSize);
+
+        for(unsigned int node=0; node< this->_numOfNodes; node++) {
+
+            vector<uint8_t> bin(_dim/8, 0);
+            for (unsigned int d = 0; d < _dim; d++) {
+                bin[int(d/8)] <<= 1;
+                if (current[node][d] > 0)
+                    bin[int(d/8)] += 1;
+            }
+            copy(bin.begin(), bin.end(), std::ostreambuf_iterator<char>(fs));
+        }
+
+        fs.close();
+
+    } else {
+        cout << "+ An error occurred during opening the file!" << endl;
+    }
+
+    for(unsigned int node=0; node < this->_numOfNodes; node++)
+        delete[] current[node];
+    delete [] current;
+
+
+}
 
 template<typename T>
 void Model<T>::_generateWeights(unsigned int N, unsigned int M) {
@@ -63,8 +135,15 @@ void Model<T>::_generateWeights(unsigned int N, unsigned int M) {
 
     default_random_engine generator(this->_rd());
     normal_distribution<T> distribution(0.0, 1.0);
-    this->_weights = Eigen::MatrixXf::Zero(N, M);
-    this->_weights = this->_weights.unaryExpr([&](float dummy) { return distribution(generator); });
+    //this->_weights = Eigen::MatrixXf::Zero(N, M);
+    //this->_weights = this->_weights.unaryExpr([&](float dummy) { return distribution(generator); });
+    this->_weights = new T*[N];
+    for(unsigned int n=0; n<N; n++) {
+        this->_weights[n] = new T[M];
+        for(unsigned int nb=0; nb<M; nb++)
+            this->_weights[n][nb] = distribution(generator);
+    }
+
 
     if (this->_verbose)
         cout << "\t- Completed!" << endl;
@@ -87,6 +166,10 @@ Model<T>::Model(unsigned int numOfNodes, unsigned int dim, bool verbose) {
 
 template<typename T>
 Model<T>::~Model() {
+
+    for(unsigned int n=0; n<this->_numOfNodes; n++)
+        delete [] _weights[n];
+    delete [] _weights;
 
 }
 

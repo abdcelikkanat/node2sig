@@ -16,12 +16,12 @@ using namespace std;
 
 
 int parse_arguments(int argc, char** argv, string &edgeFile, string &embFile, unsigned int &walkLen,
-                    unsigned int &dimension, float &contProb, int &featureBlockSize, int &weightBlockSize, int &nodesBlockSize,
+                    unsigned int &dimension, float &contProb,
                     bool &verbose) {
 
     vector <string> parameter_names{"--help",
                                     "--edgefile", "--embfile", "--walklen", "--dim",
-                                    "--prob", "--featureBlockSize", "--weightBlockSize", "--nodesBlockSize",
+                                    "--prob",
                                     "--verbose"
     };
 
@@ -37,10 +37,7 @@ int parse_arguments(int argc, char** argv, string &edgeFile, string &embFile, un
     help_msg_opt << "\nOptional parameters:\n";
     help_msg_opt << "\t[ " << parameter_names[4] << " (Default: " << dimension << ") ]\n";
     help_msg_opt << "\t[ " << parameter_names[5] << " (Default: " << contProb << ") ]\n";
-    help_msg_opt << "\t[ " << parameter_names[6] << " (Default: " << featureBlockSize <<") ]\n";
-    help_msg_opt << "\t[ " << parameter_names[7] << " (Default: " << weightBlockSize << ") ]\n";
-    help_msg_opt << "\t[ " << parameter_names[8] << " (Default: " << nodesBlockSize << ") ]\n";
-    help_msg_opt << "\t[ " << parameter_names[9] << " (Default: " << verbose << ") ]\n";
+    help_msg_opt << "\t[ " << parameter_names[6] << " (Default: " << verbose << ") ]\n";
     help_msg_opt << "\t[ " << parameter_names[0] << ", -h ] Shows this message";
 
     help_msg << "" << help_msg_required.str() << help_msg_opt.str();
@@ -61,12 +58,6 @@ int parse_arguments(int argc, char** argv, string &edgeFile, string &embFile, un
         } else if (arg_name.compare(parameter_names[5]) == 0) {
             contProb = stod(argv[i + 1]);
         } else if (arg_name.compare(parameter_names[6]) == 0) {
-            featureBlockSize = stoi(argv[i + 1]);
-        } else if (arg_name.compare(parameter_names[7]) == 0) {
-            weightBlockSize = stoi(argv[i + 1]);
-        } else if (arg_name.compare(parameter_names[8]) == 0) {
-            nodesBlockSize = stoi(argv[i + 1]);
-        } else if (arg_name.compare(parameter_names[9]) == 0) {
             verbose = stoi(argv[i + 1]);
         } else if (arg_name.compare(parameter_names[0]) == 0 or arg_name.compare("-h") == 0) {
             cout << help_msg.str() << endl;

@@ -1,6 +1,3 @@
-#define EIGEN_USE_MKL_ALL
-#include "mkl.h"
-#include <Eigen/Sparse>
 #include <vector>
 #include <iostream>
 #include <string>
@@ -21,18 +18,6 @@ void ppmi_matrix(Eigen::SparseMatrix<T, RowMajor, ptrdiff_t> &Mat);
 
 int main(int argc, char** argv) {
 
-    //string dataset_path = "/Users/abdulkadir/workspace/nodesig/cplusplus/tests/karate.edgelist";
-    //string dataset_path = "/Users/abdulkadir/workspace/nodesig/cplusplus/Homo_sapiens_renaissance.edgelist";
-    //string embFilePath = "/Users/abdulkadir/workspace/nodesig/cplusplus/deneme.embedding";
-
-    //string dataset_path = "/home/abdulkadir/Desktop/datasets/Homo_sapiens_renaissance.edgelist";
-    //string embFilePath = "/home/abdulkadir/Desktop/nodesig/cplusplus/Homo_sapiens_renaissance.embedding";
-    //string dataset_path = "/home/abdulkadir/Desktop/datasets/youtube_renaissance.edgelist";
-    //string embFilePath = "/home/abdulkadir/Desktop/nodesig/cplusplus/youtube_renaissance.embedding";
-
-    //string dataset_path = "/home/kadir/workspace/cplusplus/youtube_renaissance.edgelist";
-    //string embFilePath = "/home/kadir/workspace/cplusplus/youtube_renaissance.embedding";
-
 
     string edgeFile, embFile;
     unsigned int walkLen = 0;
@@ -41,14 +26,10 @@ int main(int argc, char** argv) {
     bool directed = false;
     unsigned int dimension = 8192;
     float contProb = 0.98;
-    int featureBlockSize = 0;
-    int weightBlockSize = 0;
-    int nodesBlockSize = 0;
     bool verbose = true;
 
 
-    int err_code =  parse_arguments(argc, argv, edgeFile, embFile, walkLen,
-            dimension, contProb, featureBlockSize, weightBlockSize, nodesBlockSize, verbose);
+    int err_code =  parse_arguments(argc, argv, edgeFile, embFile, walkLen, dimension, contProb, verbose);
 
 
     if(err_code != 0) {
@@ -61,14 +42,10 @@ int main(int argc, char** argv) {
     cout << "Walk length: " << walkLen << endl;
     cout << "Dimension: " << dimension << endl;
     cout << "Prob: " << contProb << endl;
-    cout << "Feature Block Size: " << featureBlockSize << endl;
-    cout << "Weight Block Size: " << weightBlockSize << endl;
-    cout << "Nodes Block Size: " << nodesBlockSize << endl;
     cout << "------------------------------------" << endl;
 
     auto start_time = chrono::steady_clock::now();
 
-    Eigen::initParallel();
 
     typedef float T;
 
@@ -79,138 +56,36 @@ int main(int argc, char** argv) {
     int unsigned numOfEdges = g.getNumOfEdges();
 
     // Get edge triplets
-    vector <Triplet<T>> edgesTriplets = g.getEdges<T>();
-    // Construct the adjacency matrix
-    Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> A(numOfNodes, numOfNodes);
-    A.setFromTriplets(edgesTriplets.begin(), edgesTriplets.end());
+    vector <vector <pair<unsigned int, double>>> adjList = g.getAdjList();
+    vector <vector <pair<unsigned int, T>>> P;
+    P.resize(numOfNodes);
 
-    // Normalize the adjacency matrix
-    cout << "+ The matrix is being scaled and normalized." << endl;
-    scale(A);
-    cout << "\t- Completed!" << endl;
-
-    // Construct the identity matrix
-    Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> P(numOfNodes, numOfNodes);
-    P.setIdentity();
-
-    // Construct another identity matrix
-    Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> P0(numOfNodes, numOfNodes);
-    P0.setIdentity();
-
-    if(nodesBlockSize == 0) {
-        // Construct zero matrix
-        Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> X(numOfNodes, numOfNodes);
-
-        // Random walk
-        if (verbose)
-            cout << "+ Random walks are being performed." << endl;
-        for (unsigned int l = 0; l < walkLen; l++) {
-            if (verbose)
-                cout << "\t- Current walk: " << l + 1 << endl;
-            P = P * A;
-            P = (contProb) * P + (1 - contProb) * P0;
-            X = X + P;
+    for(unsigned int node=0; node<numOfNodes; node++) {
+        for(unsigned int nbIdx=0; nbIdx<adjList[node].size(); nbIdx++) {
+            pair <unsigned int, double> p = adjList[node][nbIdx];
+            P[node].push_back(p);
+            if(get<0>(p) != node)
+                P[get<0>(p)].push_back(pair <unsigned int, double>(node, get<1>(p)));
         }
-        if (verbose)
-            cout << "\t- Completed!" << endl;
-
-        if (verbose)
-            cout << "+ Positive Pointwise Mutual Information (PPMI) is being computed." << endl;
-        ppmi_matrix<float>(X);
-        if (verbose)
-            cout << "\t- Completed!" << endl;
-
-
-        Model<T> m(numOfNodes, dimension, verbose);
-        if (verbose)
-            cout << "+ The hash codes are being generated." << endl;
-        if (featureBlockSize == 0 && weightBlockSize == 0)
-            m.encodeAllInOne(X, embFile);
-        else if (featureBlockSize == 1 && weightBlockSize == 0)
-            m.encodeByRow(X, embFile);
-        else if (weightBlockSize > 0)
-            m.encodeByWeightBlock(X, embFile, weightBlockSize);
-        else
-            cout << "Invalid settings!" << endl;
-        if (verbose)
-            cout << "\t- Completed!" << endl;
-
-    } else {
-
-        fstream fs;
-
-        Model<T> m(numOfNodes, dimension, verbose);
-
-        int numOfNodesBlocks = (int)numOfNodes / nodesBlockSize+1;
-        // Random walk
-        if (verbose)
-            cout << "+ Random walks are being performed." << endl;
-
-        int initialBlockPosition, lastBlockPosition, numOfLines;
-        for(int currentBlockIdx=0; currentBlockIdx<numOfNodesBlocks; currentBlockIdx++) {
-
-            if(verbose)
-                cout << "Current Nodes Block Id: " << currentBlockIdx+1 << "/" << numOfNodesBlocks << endl;
-
-            if(currentBlockIdx == 0)
-                fs = fstream(embFile, fstream::out | fstream::binary);
-            else
-                fs = fstream(embFile, ios_base::app | fstream::binary);
-
-            initialBlockPosition = currentBlockIdx * nodesBlockSize;
-            lastBlockPosition = (currentBlockIdx+1)*nodesBlockSize;
-            numOfLines = nodesBlockSize;
-            if(lastBlockPosition > numOfNodes)
-                numOfLines = (int)numOfNodes - initialBlockPosition;
-
-            // Construct zero matrix
-            MatrixXf x(numOfLines, numOfNodes);
-
-            MatrixXf p = P.middleRows(initialBlockPosition, numOfLines);
-            //Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t> p = P(seq(initialBlockPosition, lastBlockPosition), all)
-            /*
-            for(int i=0; i<p.outerSize(); i++) {
-                for (Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t>::InnerIterator it(p, i); it; ++it)
-                    cout << "R: " << it.row() << " C: " << it.col() << endl;
-            }
-            */
-
-            /* Random Walks */
-            for (unsigned int l = 0; l < walkLen; l++) {
-                if (verbose)
-                    cout << "\t- Current walk: " << l + 1 << endl;
-                p = p * A;
-                //p = (contProb) * p + (1 - contProb) * P0;
-                x = x + p;
-            }
-            if (verbose)
-                cout << "\t- Completed!" << endl;
-
-            // Normalize row sums
-            /*
-            T rowSum;
-            for(int i=0; i<x.outerSize(); i++) {
-                rowSum = 0;
-                for(Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t>::InnerIterator it(x, i); it; ++it)
-                    rowSum += it.value();
-
-                if(rowSum != 0) {
-                    for(Eigen::SparseMatrix<float, Eigen::RowMajor, ptrdiff_t>::InnerIterator it(x, i); it; ++it)
-                        it.valueRef() = it.valueRef() / rowSum;
-                }
-            }
-            */
-
-            m.encodeSequential(!(bool)currentBlockIdx, x, fs);
-
-
-        }
-
     }
-        auto end_time = chrono::steady_clock::now();
-        if (verbose)
-            cout << "+ Total elapsed time: " << chrono::duration_cast<chrono::seconds>(end_time - start_time).count()
-                 << "secs." << endl;
+
+
+    T rowSum;
+    for(unsigned int node=0; node<numOfNodes; node++) {
+        rowSum = 0.0;
+        for(unsigned int nbIdx=0; nbIdx<P[node].size(); nbIdx++)
+            rowSum += get<1>(P[node][nbIdx]);
+        for(unsigned int nbIdx=0; nbIdx<P[node].size(); nbIdx++)
+            get<1>(P[node][nbIdx]) = get<1>(P[node][nbIdx]) / rowSum;
+    }
+
+    Model<T> m(numOfNodes, dimension, verbose);
+    m.learnEmb(P, walkLen, embFile);
+
+    auto end_time = chrono::steady_clock::now();
+    if (verbose)
+        cout << "+ Total elapsed time: " << chrono::duration_cast<chrono::seconds>(end_time - start_time).count()
+             << "secs." << endl;
 
     return 0;
 
