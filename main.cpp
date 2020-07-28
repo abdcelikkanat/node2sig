@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
 
 
     Model<T> m(numOfNodes, dimension, verbose);
-    m.learnEmb(P, walkLen, embFile);
+    m.learnEmb(P, walkLen, alpha, embFile);
 
     auto end_time = chrono::steady_clock::now();
     if (verbose)

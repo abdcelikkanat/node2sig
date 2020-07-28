@@ -50,12 +50,12 @@ public:
     void encodeAllInOne(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &X, string filePath);
     void encodeByWeightBlock(Eigen::SparseMatrix<T, Eigen::RowMajor, ptrdiff_t> &X, string filePath, int weightBlockSize);
     void encodeSequential(bool header, Eigen::MatrixXf &x, fstream &fs);
-    void learnEmb(vector <vector <pair<unsigned int, T>>> P, unsigned int walkLen, string filePath);
+    void learnEmb(vector <vector <pair<unsigned int, T>>> P, unsigned int walkLen, T alpha, string filePath);
 
 };
 
 template<typename T>
-void Model<T>::learnEmb(vector <vector <pair<unsigned int, T>>> P, unsigned int walkLen, string filePath) {
+void Model<T>::learnEmb(vector <vector <pair<unsigned int, T>>> P, unsigned int walkLen, T alpha, string filePath) {
 
     this->_generateWeights(this->_numOfNodes, this->_dim);
 
@@ -79,6 +79,9 @@ void Model<T>::learnEmb(vector <vector <pair<unsigned int, T>>> P, unsigned int 
                 temp[node][d] = 0;
                 for(unsigned int nbIdx=0; nbIdx<P[node].size(); nbIdx++)
                     temp[node][d] += ( current[get<0>(P[node][nbIdx])][d] + this->_weights[get<0>(P[node][nbIdx])][d] )*get<1>( P[node][nbIdx] );
+
+                temp[node][d] *= alpha;
+
             }
 
         }
@@ -134,22 +137,17 @@ void Model<T>::_generateWeights(unsigned int N, unsigned int M) {
         cout << "\t- A weight matrix of size " << this->_numOfNodes << "x" << this->_dim << " is being (re)generated." << endl;
 
     default_random_engine generator(this->_rd());
-    gamma_distribution<double> distribution(1.0,1.0); //normal_distribution<T> distribution(0.0, 1.0);
-    bernoulli_distribution bern(0.5);
+    //gamma_distribution<double> distribution(1.0,1.0);
+    normal_distribution<T> distribution(0.0, 1.0);
+    //bernoulli_distribution bern(0.5);
     //this->_weights = Eigen::MatrixXf::Zero(N, M);
     //this->_weights = this->_weights.unaryExpr([&](float dummy) { return distribution(generator); });
     this->_weights = new T*[N];
     for(unsigned int n=0; n<N; n++) {
         this->_weights[n] = new T[M];
-        T rowsum = 0;
         for(unsigned int nb=0; nb<M; nb++) {
             this->_weights[n][nb] = distribution(generator);
-            rowsum += this->_weights[n][nb];
-            if( !bern(generator) )
-                this->_weights[n][nb] *= -1;
         }
-        for(unsigned int nb=0; nb<M; nb++)
-            this->_weights[n][nb] /= rowsum;
     }
 
 
