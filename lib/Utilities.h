@@ -16,12 +16,12 @@ using namespace std;
 
 
 int parse_arguments(int argc, char** argv, string &edgeFile, string &embFile, unsigned int &walkLen,
-                    unsigned int &dimension, float &contProb,
+                    unsigned int &dimension, float &alpha,
                     bool &verbose) {
 
     vector <string> parameter_names{"--help",
                                     "--edgefile", "--embfile", "--walklen", "--dim",
-                                    "--prob",
+                                    "--alpha",
                                     "--verbose"
     };
 
@@ -36,7 +36,7 @@ int parse_arguments(int argc, char** argv, string &edgeFile, string &embFile, un
 
     help_msg_opt << "\nOptional parameters:\n";
     help_msg_opt << "\t[ " << parameter_names[4] << " (Default: " << dimension << ") ]\n";
-    help_msg_opt << "\t[ " << parameter_names[5] << " (Default: " << contProb << ") ]\n";
+    help_msg_opt << "\t[ " << parameter_names[5] << " (Default: " << alpha << ") ]\n";
     help_msg_opt << "\t[ " << parameter_names[6] << " (Default: " << verbose << ") ]\n";
     help_msg_opt << "\t[ " << parameter_names[0] << ", -h ] Shows this message";
 
@@ -56,7 +56,7 @@ int parse_arguments(int argc, char** argv, string &edgeFile, string &embFile, un
         } else if (arg_name.compare(parameter_names[4]) == 0) {
             dimension = stoi(argv[i + 1]);
         } else if (arg_name.compare(parameter_names[5]) == 0) {
-            contProb = stod(argv[i + 1]);
+            alpha = stod(argv[i + 1]);
         } else if (arg_name.compare(parameter_names[6]) == 0) {
             verbose = stoi(argv[i + 1]);
         } else if (arg_name.compare(parameter_names[0]) == 0 or arg_name.compare("-h") == 0) {
@@ -79,8 +79,8 @@ int parse_arguments(int argc, char** argv, string &edgeFile, string &embFile, un
     }
 
     // Check if the constraints are satisfied
-    if( contProb < 0 ||  contProb > 1) {
-        cout << "The probability should be between 0 and 1." << endl;
+    if( alpha < 0 ) {
+        cout << "alpha should be greater than 0." << endl;
         return -5;
     }
 
