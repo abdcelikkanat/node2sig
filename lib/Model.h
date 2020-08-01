@@ -138,8 +138,9 @@ void Model<T>::_generateWeights(unsigned int N, unsigned int M) {
 
     default_random_engine generator(this->_rd());
     //gamma_distribution<double> distribution(1.0,1.0);
-    normal_distribution<T> distribution(0.0, 1.0);
-    //bernoulli_distribution bern(0.5);
+    //normal_distribution<T> distribution(0.0, 1.0);
+    gamma_distribution<T> distribution(1.0, 1.0);
+    bernoulli_distribution bern(0.5);
     //this->_weights = Eigen::MatrixXf::Zero(N, M);
     //this->_weights = this->_weights.unaryExpr([&](float dummy) { return distribution(generator); });
     this->_weights = new T*[N];
@@ -149,7 +150,18 @@ void Model<T>::_generateWeights(unsigned int N, unsigned int M) {
             this->_weights[n][nb] = distribution(generator);
         }
     }
-
+    
+    for(unsigned int nb=0; nb<M; nb++) {
+        T rowsum = 0;
+        for(unsigned int n=0; n<N; n++) {
+           rowsum += this->_weights[n][nb];
+        }
+        for(unsigned int n=0; n<N; n++) {
+           this->_weights[n][nb] /= rowsum;
+           if(!bern(generator))
+               this->_weights[n][nb] *= -1.0;
+        }
+    }
 
     if (this->_verbose)
         cout << "\t- Completed!" << endl;
