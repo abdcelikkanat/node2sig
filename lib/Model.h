@@ -57,7 +57,7 @@ public:
 template<typename T>
 void Model<T>::learnEmb(vector <vector <pair<unsigned int, T>>> P, unsigned int walkLen, T alpha, string filePath) {
 
-    this->_generateWeights(this->_numOfNodes, this->_dim, walklen);
+    this->_generateWeights(this->_numOfNodes, this->_dim, walkLen);
 
 
     T **current = new T*[this->_numOfNodes];
