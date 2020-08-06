@@ -40,7 +40,7 @@ private:
     bool _verbose;
     int _headerBlockSize = 4; // in bytes
     random_device _rd;
-    void _generateWeights(unsigned int N, unsigned int M);
+    void _generateWeights(unsigned int N, unsigned int M, unsigned int walklen);
 
 public:
 
@@ -57,7 +57,7 @@ public:
 template<typename T>
 void Model<T>::learnEmb(vector <vector <pair<unsigned int, T>>> P, unsigned int walkLen, T alpha, string filePath) {
 
-    this->_generateWeights(this->_numOfNodes, this->_dim);
+    this->_generateWeights(this->_numOfNodes, this->_dim, walklen);
 
 
     T **current = new T*[this->_numOfNodes];
@@ -131,7 +131,7 @@ void Model<T>::learnEmb(vector <vector <pair<unsigned int, T>>> P, unsigned int 
 }
 
 template<typename T>
-void Model<T>::_generateWeights(unsigned int N, unsigned int M) {
+void Model<T>::_generateWeights(unsigned int N, unsigned int M, unsigned int walklen) {
 
     if (this->_verbose)
         cout << "\t- A weight matrix of size " << this->_numOfNodes << "x" << this->_dim << " is being (re)generated." << endl;
@@ -139,7 +139,7 @@ void Model<T>::_generateWeights(unsigned int N, unsigned int M) {
     default_random_engine generator(this->_rd());
     //gamma_distribution<double> distribution(1.0,1.0);
     //normal_distribution<T> distribution(0.0, 1.0);
-    cauchy_distribution<T> distribution(0.0, 1.0); cout << "CAUCHY" << endl;
+    cauchy_distribution<T> distribution(0.0, 1.0); cout << "CAUCHY: " << walklen << endl;
     //bernoulli_distribution bern(0.5);
     //this->_weights = Eigen::MatrixXf::Zero(N, M);
     //this->_weights = this->_weights.unaryExpr([&](float dummy) { return distribution(generator); });
@@ -147,7 +147,7 @@ void Model<T>::_generateWeights(unsigned int N, unsigned int M) {
     for(unsigned int n=0; n<N; n++) {
         this->_weights[n] = new T[M];
         for(unsigned int nb=0; nb<M; nb++) {
-            this->_weights[n][nb] = distribution(generator) / 5.0;
+            this->_weights[n][nb] = distribution(generator) / walklen;
         }
     }
     
