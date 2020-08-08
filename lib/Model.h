@@ -139,7 +139,7 @@ void Model<T>::_generateWeights(unsigned int N, unsigned int M, unsigned int wal
     default_random_engine generator(this->_rd());
     //gamma_distribution<double> distribution(1.0,1.0);
     //normal_distribution<T> distribution(0.0, 1.0);
-    cauchy_distribution<T> distribution(0.0, 1.0); cout << "CAUCHY: " << walklen << endl;
+    normal_distribution<T> distribution(0.0, 1.0); cout << "Normal: " << walklen << endl;
     //bernoulli_distribution bern(0.5);
     //this->_weights = Eigen::MatrixXf::Zero(N, M);
     //this->_weights = this->_weights.unaryExpr([&](float dummy) { return distribution(generator); });
