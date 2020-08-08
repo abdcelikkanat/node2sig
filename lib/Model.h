@@ -147,7 +147,7 @@ void Model<T>::_generateWeights(unsigned int N, unsigned int M, unsigned int wal
     for(unsigned int n=0; n<N; n++) {
         this->_weights[n] = new T[M];
         for(unsigned int nb=0; nb<M; nb++) {
-            this->_weights[n][nb] = distribution(generator) / walklen;
+            this->_weights[n][nb] = distribution(generator);
         }
     }
     
